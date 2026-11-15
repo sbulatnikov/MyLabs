@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_call:   # те же проверки и сборка — перед выпуском (release.yml)
 
 jobs:
   test:
