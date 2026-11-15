@@ -1,24 +1,40 @@
 """Карточки MyLabs для форума: шесть PNG 1600x900 в том же формате, что у RaidPartyLeader.
 
   python3 promo/cards.py <папка-результат>
-Нужен google-chrome (headless). Окно аддона собирается из тех же размеров и цветов, что и в игре
+Шрифты Inter и Lora берутся с Google Fonts (нужен интернет), чтобы карточки выходили одинаковыми на любой машине.
+Нужен Chrome или Chromium (headless): google-chrome, chromium, chrome.exe — или путь в переменной CHROME. Окно аддона собирается из тех же размеров и цветов, что и в игре
 (единицы макета, см. gen/build.py), значки — картинки из ресурсов игры (assets/).
 """
-import os, subprocess, sys, html
+import os, pathlib, re, shutil, subprocess, sys, html
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SRC = os.path.dirname(HERE)
 OUT = os.path.abspath(sys.argv[1]) if len(sys.argv) > 1 else os.path.join(SRC, 'out', 'cards')
-VERSION = '0.9.0'
+VERSION = re.search(r'ML\.VERSION = "([^"]+)"', open(os.path.join(SRC, 'lua', 'Util.lua'), encoding='utf-8').read()).group(1)
 os.makedirs(OUT, exist_ok=True)
 
 
+def uri(path):
+    return pathlib.Path(path).resolve().as_uri()
+
+
+def chrome():
+    names = [os.environ.get('CHROME'), 'google-chrome', 'chromium', 'chromium-browser', 'chrome',
+             r'C:\Program Files\Google\Chrome\Application\chrome.exe',
+             r'C:\Program Files (x86)\Google\Chrome\Application\chrome.exe']
+    for n in names:
+        found = n and (shutil.which(n) or (os.path.isfile(n) and n))
+        if found:
+            return found
+    sys.exit('не найден Chrome: поставьте его или укажите путь в переменной CHROME')
+
+
 def A(name):
-    return 'file://' + os.path.join(SRC, 'assets', name)
+    return uri(os.path.join(SRC, 'assets', name))
 
 
-FONT = 'file://' + os.path.join(SRC, 'assets', 'Allods.ttf')
-BG = 'file://' + os.path.join(HERE, 'horn-shot.png')
+FONT = uri(os.path.join(SRC, 'assets', 'Allods.ttf'))
+BG = uri(os.path.join(HERE, 'horn-shot.png'))
 
 PROD = {
     'gold': ('Золото', 'res-gold.png'), 'tear1': ('Сияющие слёзы', 'res-tears-shining.png'),
@@ -31,6 +47,7 @@ RES_ICONS = ['res-granite.png', 'res-coral.png', 'res-embrium.png', 'res-meteori
 FAC = {'L': 'faction-league.png', 'E': 'faction-empire.png'}
 
 CSS = '''
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:wght@400;700&display=swap");
 @font-face{font-family:AllodsWest;src:url("%s")}
 *{box-sizing:border-box}
 body{margin:0;background:#0B0C10}
@@ -415,10 +432,11 @@ cards.append(('6-newhorn', page(
      (timg('res-embrium.png'), 'Сколько эмбриума уйдёт на обмен'),
      (tile('✓'), 'Итог одной строкой: можно строить или нет')], v1 + v2)))
 
+CHROME = chrome()
 for name, doc in cards:
     hp = os.path.join(OUT, name + '.html')
     open(hp, 'w', encoding='utf-8').write(doc)
     png = os.path.join(OUT, 'MyLabs-%s.png' % name)
-    subprocess.run(['google-chrome', '--headless=new', '--no-sandbox', '--disable-gpu', '--hide-scrollbars', '--force-device-scale-factor=1',
-                    '--window-size=1600,900', '--screenshot=' + png, 'file://' + hp], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    subprocess.run([CHROME, '--headless=new', '--no-sandbox', '--disable-gpu', '--hide-scrollbars', '--force-device-scale-factor=1',
+                    '--window-size=1600,900', '--virtual-time-budget=8000', '--screenshot=' + png, uri(hp)], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     print(png)
