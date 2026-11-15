@@ -1,0 +1,34 @@
+# Сборка аддона и прогон тестов на заглушках API игры — обычная и отладочная сборка
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Инструменты сборки
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y librsvg2-bin luajit
+          pip install numpy pillow
+      - name: Тесты, обычная сборка
+        run: sh test/run.sh out
+      - name: Тесты, отладочная сборка
+        run: ALLODS_DEBUG=1 sh test/run.sh out/debug
+      - name: В обычной сборке нет pcall и отладки
+        run: |
+          ! grep -rnE '(^|[^[:alnum:]_.])pcall\b' out/MyLabs/Scripts --include='*.lua'
+          ! grep -rnwE 'debug|DEBUG|Debug|Probe' out/MyLabs/Scripts --include='*.lua'
+      - name: Упаковка
+        run: python gen/pak.py out/MyLabs out/MyLabs.pak
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MyLabs-pak
+          path: out/MyLabs.pak
