@@ -13,7 +13,7 @@ OUT = os.path.join(DEST, 'MyLabs')
 PREV = os.path.join(DEST, 'preview')
 VERSION = re.search(r'ML\.VERSION = "([^"]+)"', open(os.path.join(SRC, 'lua', 'Util.lua'), encoding='utf-8').read()).group(1)
 SCRIPTS = ['LibDnD', 'Util', 'Core', 'UI', 'Main']
-sys.path.insert(0, os.path.join(SRC, '..', '..', 'tools'))
+sys.path.insert(0, os.path.join(SRC, 'tools'))  # своя копия: репозиторий собирается сам по себе
 import strip_debug  # noqa: E402  — отладка только в сборке с ALLODS_DEBUG=1
 
 shutil.rmtree(OUT, ignore_errors=True)
