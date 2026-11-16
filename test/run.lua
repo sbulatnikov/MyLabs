@@ -160,6 +160,17 @@ common = {
 		return { HasTexture = function( self, key ) return world.icons[ key ] == true end, GetTexture = function( self, key ) return { tex = key } end }
 	end,
 }
+-- сражения нужны только отладочной разведке: один налёт с посещениями
+matchMaking = {
+	CanUseMatchMaking = function() return true end,
+	IsEventListValid = function() return true end,
+	ListenEvents = function( on ) end,
+	GetEvents = function() return { [ 0 ] = 501 } end,
+	GetEventInfo = function( id )
+		return { name = W( "Чужой лабиринт" ), eventType = { pillage = { capacity = 1 } }, todayVisits = 2, maxVisitsPerDay = 5,
+			weeklyVisits = nil, maxVisitsPerWeek = 0, difficulty = W( "Обычная" ), isAvailable = true }
+	end,
+}
 mission = {
 	GetWorldTimeMs = function() return clock end,
 	GetShardName = function() return W( "Нить судьбы" ) end,
