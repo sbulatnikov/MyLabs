@@ -910,12 +910,19 @@ function C.ListenVisits()
 	C.ReadVisits()
 end
 
+-- Игра обнуляет недельный счётчик в ночь со среды на четверг в 03:00 по Москве — это четверг 00:00 UTC.
+-- Unix-время началось в четверг 00:00 UTC, поэтому номер недели — просто целая часть от деления на неделю.
+local WEEK_MS = 7 * ML.DAY_MS
+local function WeekOf( ms )
+	return math.floor( ms / WEEK_MS )
+end
+
 -- Сколько раз персонаж посетил лабиринты за неделю: n, max; nil — данных нет.
--- Число, записанное больше недели назад, игра уже точно обнулила — его не показываем.
+-- Число, записанное до последнего обнуления, уже не действует: в новой неделе посещений ещё не было.
 function C.Visits( ch, now )
 	local v = ch.visits
 	if type( v ) ~= "table" or type( v.n ) ~= "number" or type( v.max ) ~= "number" or type( v.at ) ~= "number" then return nil end
-	if ( now or ML.Now() ) - v.at > 7 * ML.DAY_MS then return nil end
+	if WeekOf( now or ML.Now() ) ~= WeekOf( v.at ) then return 0, v.max end
 	return v.n, v.max
 end
 

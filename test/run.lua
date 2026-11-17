@@ -773,8 +773,15 @@ Login( Lab( "Новичок", 1004, { noBattles = true, battlesReady = true, vis
 Click( Find( "MLButton" ) )
 check( world.listen == nil and ML.Core.Visits( ML.Core.Char() ) == nil, "сражения закрыты — список не запрашиваем, посещений нет" )
 check( ML.Core.Visits( ML.db.chars.c1003 ) == 3, "посещения другого персонажа сохранились" )
-clock = clock + 8 * 86400000
-check( ML.Core.Visits( ML.db.chars.c1003 ) == nil, "через восемь дней старое число не показываем" )
+-- недельный счётчик игра обнуляет в четверг 00:00 UTC (03:00 по Москве)
+local WEEK = 7 * 86400000
+local reset = ( math.floor( clock / WEEK ) + 1 ) * WEEK
+clock = reset - 1000
+check( ML.Core.Visits( ML.db.chars.c1003 ) == 3, "за секунду до обнуления число прежнее" )
+clock = reset + 1000
+local rn, rmax = ML.Core.Visits( ML.db.chars.c1003 )
+check( rn == 0 and rmax == 5, "после четверга 03:00 по Москве — 0 из 5" )
+check( os.date( "!%w %H:%M", reset / 1000 ) == "4 00:00", "граница недели — четверг 00:00 UTC" )
 Tick( 2 )
 
 section( "7. Ошибки в журнале" )
