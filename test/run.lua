@@ -702,9 +702,18 @@ check( me.horns[ s6e ].assign == "granite", "свободному рогу на�
 selected = {}
 TalkTo( world.horns[ 6 ], EMP[ 6 ] )
 check( table.concat( selected, " " ) == "рог6:3" and world.horns[ 6 ].product == "Астральный гранит", "Гранит запущен (" .. table.concat( selected, " " ) .. ")" )
--- построен восьмой рог
-world.horns[ 8 ] = { no = 8, id = 20008, state = "free" }
+-- построен восьмой рог: зашли заново, спросили цену у прораба (рогов в зоне семь), построили и сразу
+-- подошли к новому рогу, не поговорив с остальными. Новый рог не должен занять строку старого.
+Reenter( 21000 )
+talk = { id = 555, name = "Буба Молоток", cue = { name = W( "Прораб" ), text = W( "Чего надо?" ), data = {} },
+	answers = { [ 0 ] = { name = W( "<html>Построить восьмой рог изобилия за <r name=\"cost\"/> ед. астрального коралла</html>" ), text = W( "" ),
+		data = { [ 0 ] = { alias = "cost", number = 2880 } } } } }
+Fire( "EVENT_INTERACTION_STARTED" )
+local s7e = SlotOf( me, EMP[ 7 ] )
+world.horns[ 8 ] = { no = 8, id = 21999, state = "free" }
 TalkTo( world.horns[ 8 ], { 8010, 2805 } )
+check( #me.horns == 8 and me.horns[ 8 ].st == "free", "новый рог получил свою, восьмую строку" )
+check( me.horns[ s7e ].st == "busy" and me.horns[ s7e ].prod == "coral", "строка седьмого рога не тронута" )
 check( me.hornCount == 8 and ML.Core.NewHorn( me ).state == "nodata", "восьмой рог появился, старая цена больше не годится" )
 talk = { id = 555, name = "Буба Молоток", cue = { name = W( "Прораб" ), text = W( "Чего надо?" ), data = {} },
 	answers = { [ 0 ] = { name = W( "Построить девятый рог изобилия за 3600 ед. астрального коралла" ), text = W( "" ), data = { [ 0 ] = { alias = "cost", number = 3600 } } } } }

@@ -450,6 +450,7 @@ local hornCount, hornCountOk = 0, false
 -- Сколько рогов в зоне. Список устройств просматривается один раз за посещение зоны
 -- (и заново — после разговора с прорабом: мог появиться новый рог).
 local hornIds = {}           -- id рогов из списка устройств зоны
+local recounted = {}         -- id рогов, ради которых список уже пересчитывали (не чаще раза на рог)
 local function CountHorns()
 	if hornCountOk then return hornCount end
 	local devs = avatar.GetDeviceList()
@@ -570,6 +571,12 @@ function C.OnInteraction()
 	pos = ( type( pos ) == "table" and type( pos.posX ) == "number" and type( pos.posY ) == "number" ) and pos or nil
 
 	DropStaleBind( ch, objId )
+	-- Рога, с которым мы говорим, нет в списке устройств зоны: его построили после подсчёта
+	-- (список читается раз за посещение). Считаем заново, иначе новый рог займёт строку старого.
+	if hornCountOk and not hornIds[ objId ] and not recounted[ objId ] then
+		recounted[ objId ] = true
+		hornCountOk = false
+	end
 	local count = CountHorns()
 	local slot = C.SlotFor( ch, objId, st, pos, count )
 	local h = ch.horns[ slot ]
