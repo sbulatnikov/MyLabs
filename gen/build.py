@@ -187,10 +187,10 @@ F('PillAcc', F_SMALL, ACC_T, 'center')
 F('Badge', F_NUM, '#FFFFFF', 'center')
 
 # ------------------------------------------------------------------ размеры окна (макет)
-W_, H_, HDR = 824, 676, 40
+W_, H_, HDR = 860, 676, 40
 WW, WH = P(W_), P(H_)
-LEFT_X, LEFT_W = 12, 232
-CARD_X, CARD_W = 268, 544
+LEFT_X, LEFT_W = 12, 268          # в строке персонажа — колонка посещений лабиринтов
+CARD_X, CARD_W = 304, 544
 PANE_Y, PANE_H = 52, 612
 ROWS = 12                      # рогов у персонажа не больше двенадцати
 CHARS = 12
@@ -229,6 +229,7 @@ CRW = LW - 2 * P(4)
 img('CharDot', P(4), (CRH - 6) // 2, 6, 6, DOT)
 img('CharFac', P(14), (CRH - P(20)) // 2, P(27), P(20), ic('FAC_LEAGUE'))
 tv('CharName', P(47), 0, P(103), CRH, 'Body')
+tv('CharVisits', P(152), 0, P(32), CRH, 'SmallCenter')      # посещения лабиринтов за неделю: «3/5»
 pill('CharPillOk', CRW - P(6) - P(64), (CRH - P(20)) // 2, P(64), P(20), 'ok', 'PillOk', visible=False)
 pill('CharPillWarn', CRW - P(6) - P(64), (CRH - P(20)) // 2, P(64), P(20), 'warn', 'PillWarn', visible=False)
 tv('CharTime', CRW - P(6) - P(70), 0, P(70), CRH, 'SmallRight')
@@ -239,6 +240,7 @@ for i in range(CHARS):
         [{'normal': TRANSP, 'hover': ROW['h'], 'pressed': ROW['h'], 'reaction': 'ml_char', 'push': 0},
          {'normal': ROW['sel'], 'hover': ROW['selH'], 'pressed': ROW['selH'], 'reaction': 'ml_char', 'push': 0}],
         children=['CharDot.(WidgetPanel).xdb', 'CharFac.(WidgetPanel).xdb', 'CharName.(WidgetTextView).xdb',
+                  'CharVisits.(WidgetTextView).xdb',
                   'CharPillOk.(WidgetPanel).xdb', 'CharPillWarn.(WidgetPanel).xdb', 'CharTime.(WidgetTextView).xdb'],
         visible=False))
 tv('CharsTitle', 0, 0, P(150), P(22), 'Sect')
@@ -255,6 +257,7 @@ card.append(img('CardFac', 0, P(3), P(40), P(30), ic('FAC_LEAGUE')))
 card.append(tv('CardName', P(50), 0, P(300), P(36), 'Name'))
 card.append(pill('HereBadge', CW - P(76), P(8), P(76), P(20), 'acc', 'PillAcc', visible=False))
 card.append(tv('CardSeen', CW - P(220), P(8), P(220), P(20), 'SmallRight'))
+card.append(tv('CardVisits', CW - P(260), P(27), P(260), P(17), 'SmallRight'))
 
 # ресурсы: шесть плашек в ряд
 GAP = P(6)

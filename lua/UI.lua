@@ -39,6 +39,7 @@ function UI.Init()
 	for i = 1, MAX_CHARS do
 		local row = W( "CharRow" .. i )
 		local r = { row = row, dot = Child( row, "CharDot" ), fac = Child( row, "CharFac" ), name = Child( row, "CharName" ),
+			visits = Child( row, "CharVisits" ),
 			ok = Child( row, "CharPillOk" ), warn = Child( row, "CharPillWarn" ), time = Child( row, "CharTime" ) }
 		r.okText = Child( r.ok, "CharPillOkText" )
 		r.warnText = Child( r.warn, "CharPillWarnText" )
@@ -50,6 +51,7 @@ function UI.Init()
 	ui.here = W( "HereBadge" )
 	SetText( Child( ui.here, "HereBadgeText" ), "Вы здесь" )
 	ui.seen = W( "CardSeen" )
+	ui.cardVisits = W( "CardVisits" )
 	ui.chips = {}
 	for i, r in ipairs( ML.RESOURCES ) do
 		local chip = W( "Chip" .. i )
@@ -199,6 +201,8 @@ local function RenderChars( now )
 			Show( r.dot, key == C.me )
 			SetTex( r.fac, FacIcon( ch ) )
 			SetText( r.name, ch.name )
+			local visits, visitsMax = C.Visits( ch, now )
+			SetText( r.visits, visits and ( visits .. "/" .. visitsMax ) or "" )
 			local ready, attention, soonest, known = C.Summary( ch, now )
 			Show( r.ok, ready > 0 )
 			Show( r.warn, ready == 0 and attention > 0 )
@@ -306,6 +310,8 @@ local function RenderCard( now )
 	Show( ui.here, here )
 	Show( ui.seen, not here )
 	if not here then SetText( ui.seen, "данные от " .. ML.Stamp( ch.seen ) ) end
+	local visits, visitsMax = C.Visits( ch, now )
+	SetText( ui.cardVisits, visits and ( "Посещения лабиринтов: " .. visits .. " из " .. visitsMax ) or "" )
 
 	local res = ch.res or {}
 	for i, r in ipairs( ML.RESOURCES ) do

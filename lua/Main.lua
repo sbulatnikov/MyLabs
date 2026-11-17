@@ -173,6 +173,8 @@ local function Start()
 	On( "EVENT_CURRENCY_VALUE_CHANGED", C.OnCurrency )
 	On( "EVENT_CONTAINER_ITEM_ADDED", C.OnItemAdded )
 	On( "EVENT_AVATAR_CLIENT_ZONE_CHANGED", C.OnZoneChanged )
+	On( "EVENT_MATCH_MAKING_EVENTS_CHANGED", C.ReadVisits )
+	On( "EVENT_MATCH_MAKING_EVENT_VISITS_CHANGED", C.OnVisitsChanged )
 
 	UI.Render()
 	ML.Log( "MyLabs " .. ML.VERSION .. " загружен" .. ( ML.db.auto and "" or ", автоматика выключена" ) ) --@debug

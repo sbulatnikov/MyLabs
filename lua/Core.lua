@@ -858,11 +858,73 @@ end
 --------------------------------------------------------------------------------
 -- Запуск и секундный такт
 --------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+-- Посещения лабиринтов за неделю: счётчик игры из окна «Сражения»
+--------------------------------------------------------------------------------
+-- Сражение «Лабиринт» узнаём по типу «грабительский налёт» с недельным лимитом; номер сражения
+-- у игры меняется от входа к входу, поэтому его не храним.
+local function LabyrinthVisits( id )
+	local info = matchMaking.GetEventInfo( id )
+	-- Ожидаем: описания сражения может не быть (nil) — пропускаем
+	if type( info ) ~= "table" or type( info.eventType ) ~= "table" or info.eventType.pillage == nil then return nil end
+	local max = info.maxVisitsPerWeek
+	if type( max ) ~= "number" or max <= 0 then return nil end
+	-- Ожидаем: пока посещений за неделю не было, игра счётчик не присылает (nil) — это ноль
+	local n = type( info.weeklyVisits ) == "number" and info.weeklyVisits or 0
+	return n, max
+end
+
+local function StoreVisits( n, max )
+	local ch = C.Char()
+	if not ch then return end
+	local v = ch.visits
+	local same = type( v ) == "table" and v.n == n and v.max == max
+	ch.visits = { n = n, max = max, at = ML.Now() }
+	if not same then Changed() end
+end
+
+function C.ReadVisits()
+	-- Ожидаем: список сражений приходит не сразу после запроса — дождёмся EVENT_MATCH_MAKING_EVENTS_CHANGED
+	if not matchMaking.IsEventListValid() then return end
+	local ids = matchMaking.GetEvents()
+	if type( ids ) ~= "table" then return end
+	for _, id in pairs( ids ) do
+		local n, max = LabyrinthVisits( id )
+		if n then
+			StoreVisits( n, max )
+			return
+		end
+	end
+end
+
+function C.OnVisitsChanged( p )
+	local n, max = LabyrinthVisits( p.eventId )
+	if n then StoreVisits( n, max ) end
+end
+
+-- Просим игру присылать список сражений (сама она делает это только при открытом окне «Сражения»)
+function C.ListenVisits()
+	-- Ожидаем: сражения персонажу могут быть ещё закрыты — тогда посещений не показываем
+	if not matchMaking.CanUseMatchMaking() then return end
+	matchMaking.ListenEvents( true )
+	C.ReadVisits()
+end
+
+-- Сколько раз персонаж посетил лабиринты за неделю: n, max; nil — данных нет.
+-- Число, записанное больше недели назад, игра уже точно обнулила — его не показываем.
+function C.Visits( ch, now )
+	local v = ch.visits
+	if type( v ) ~= "table" or type( v.n ) ~= "number" or type( v.max ) ~= "number" or type( v.at ) ~= "number" then return nil end
+	if ( now or ML.Now() ) - v.at > 7 * ML.DAY_MS then return nil end
+	return v.n, v.max
+end
+
 function C.Init()
 	C.Load()
 	EnsureMe()
 	C.OnZoneChanged()
 	C.ReadCurrencies()
+	C.ListenVisits()
 	C.ChestSoon( 5 )
 	C.Save()
 end

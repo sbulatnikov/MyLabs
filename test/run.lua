@@ -160,15 +160,17 @@ common = {
 		return { HasTexture = function( self, key ) return world.icons[ key ] == true end, GetTexture = function( self, key ) return { tex = key } end }
 	end,
 }
--- сражения нужны только отладочной разведке: один налёт с посещениями
+-- сражения: посещения лабиринтов за неделю берутся из «Лабиринта» (налёт с недельным лимитом)
 matchMaking = {
-	CanUseMatchMaking = function() return true end,
-	IsEventListValid = function() return true end,
-	ListenEvents = function( on ) end,
-	GetEvents = function() return { [ 0 ] = 501 } end,
+	CanUseMatchMaking = function() return not world.noBattles end,
+	IsEventListValid = function() return world.battlesReady == true end,
+	ListenEvents = function( on ) world.listen = on end,
+	GetEvents = function() return { [ 0 ] = 500, [ 1 ] = 502, [ 2 ] = 501 } end,
 	GetEventInfo = function( id )
-		return { name = W( "Чужой лабиринт" ), eventType = { pillage = { capacity = 1 } }, todayVisits = 2, maxVisitsPerDay = 5,
-			weeklyVisits = nil, maxVisitsPerWeek = 0, difficulty = W( "Обычная" ), isAvailable = true }
+		if id == 500 then return { name = W( "Арена Смерти" ), eventType = { group = {} }, weeklyVisits = 9, maxVisitsPerWeek = 0 } end
+		if id == 502 then return { name = W( "Проверка на прочность" ), eventType = { pillage = {} }, weeklyVisits = nil, maxVisitsPerWeek = 0 } end
+		return { name = W( "Лабиринт" ), eventType = { pillage = { capacity = 1 } }, todayVisits = nil, maxVisitsPerDay = 0,
+			weeklyVisits = world.visits, maxVisitsPerWeek = 5, difficulty = W( "Обычная" ), isAvailable = true }
 	end,
 }
 mission = {
@@ -741,6 +743,38 @@ for pass = 1, 2 do
 	for i = 1, 7 do TalkTo( world.horns[ i ], LEAGUE[ i ] ) end
 end
 check( #me.horns == 7 and Known() == 7, "полный проход: 7 строк на 7 рогов" )
+Tick( 2 )
+
+section( "6б. Посещения лабиринтов за неделю" )
+local function Lab( name, id, extra )
+	local w = { name = name, serverId = id, faction = "League", zone = "Novograd", bag = {}, pos = { posX = 0, posY = 0, posZ = 0 }, horns = {}, currencies = {} }
+	for k, v in pairs( extra or {} ) do w[ k ] = v end
+	return w
+end
+Login( Lab( "Грабитель", 1003 ) )
+Click( Find( "MLButton" ) )
+check( world.listen == true and ML.Core.Visits( ML.Core.Char() ) == nil, "список сражений запрошен; пока он не пришёл, посещений нет" )
+check( Val( Find( "CardVisits" ) ) == "" and Val( Find( "CharVisits", Find( "CharRow1" ) ) ) == "", "нет данных — в окне ничего не показано" )
+world.battlesReady = true
+Fire( "EVENT_MATCH_MAKING_EVENTS_CHANGED", {} )
+Tick( 1 )
+local vn, vmax = ML.Core.Visits( ML.Core.Char() )
+check( vn == 0 and vmax == 5, "список пришёл, счётчика у игры нет — это 0 из 5" )
+check( Val( Find( "CardVisits" ) ) == "Посещения лабиринтов: 0 из 5" and Val( Find( "CharVisits", Find( "CharRow1" ) ) ) == "0/5", "окно: 0 из 5" )
+world.visits = 3
+Fire( "EVENT_MATCH_MAKING_EVENT_VISITS_CHANGED", { eventId = 500 } )
+Tick( 1 )
+check( ML.Core.Visits( ML.Core.Char() ) == 0, "чужое сражение счётчик не меняет" )
+Fire( "EVENT_MATCH_MAKING_EVENT_VISITS_CHANGED", { eventId = 501 } )
+Tick( 1 )
+check( ML.Core.Visits( ML.Core.Char() ) == 3 and Val( Find( "CharVisits", Find( "CharRow1" ) ) ) == "3/5", "после посещения — 3 из 5" )
+Tick( 2 )
+Login( Lab( "Новичок", 1004, { noBattles = true, battlesReady = true, visits = 4 } ) )
+Click( Find( "MLButton" ) )
+check( world.listen == nil and ML.Core.Visits( ML.Core.Char() ) == nil, "сражения закрыты — список не запрашиваем, посещений нет" )
+check( ML.Core.Visits( ML.db.chars.c1003 ) == 3, "посещения другого персонажа сохранились" )
+clock = clock + 8 * 86400000
+check( ML.Core.Visits( ML.db.chars.c1003 ) == nil, "через восемь дней старое число не показываем" )
 Tick( 2 )
 
 section( "7. Ошибки в журнале" )
