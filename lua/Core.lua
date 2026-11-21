@@ -450,6 +450,7 @@ local hornCount, hornCountOk = 0, false
 -- Сколько рогов в зоне. Список устройств просматривается один раз за посещение зоны
 -- (и заново — после разговора с прорабом: мог появиться новый рог).
 local hornIds = {}           -- id рогов из списка устройств зоны
+local recounted = {}         -- id рогов, ради которых список уже пересчитывали (не чаще раза на рог)
 local function CountHorns()
 	if hornCountOk then return hornCount end
 	local devs = avatar.GetDeviceList()
@@ -570,6 +571,12 @@ function C.OnInteraction()
 	pos = ( type( pos ) == "table" and type( pos.posX ) == "number" and type( pos.posY ) == "number" ) and pos or nil
 
 	DropStaleBind( ch, objId )
+	-- Рога, с которым мы говорим, нет в списке устройств зоны: его построили после подсчёта
+	-- (список читается раз за посещение). Считаем заново, иначе новый рог займёт строку старого.
+	if hornCountOk and not hornIds[ objId ] and not recounted[ objId ] then
+		recounted[ objId ] = true
+		hornCountOk = false
+	end
 	local count = CountHorns()
 	local slot = C.SlotFor( ch, objId, st, pos, count )
 	local h = ch.horns[ slot ]
@@ -858,11 +865,80 @@ end
 --------------------------------------------------------------------------------
 -- Запуск и секундный такт
 --------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+-- Посещения лабиринтов за неделю: счётчик игры из окна «Сражения»
+--------------------------------------------------------------------------------
+-- Сражение «Лабиринт» узнаём по типу «грабительский налёт» с недельным лимитом; номер сражения
+-- у игры меняется от входа к входу, поэтому его не храним.
+local function LabyrinthVisits( id )
+	local info = matchMaking.GetEventInfo( id )
+	-- Ожидаем: описания сражения может не быть (nil) — пропускаем
+	if type( info ) ~= "table" or type( info.eventType ) ~= "table" or info.eventType.pillage == nil then return nil end
+	local max = info.maxVisitsPerWeek
+	if type( max ) ~= "number" or max <= 0 then return nil end
+	-- Ожидаем: пока посещений за неделю не было, игра счётчик не присылает (nil) — это ноль
+	local n = type( info.weeklyVisits ) == "number" and info.weeklyVisits or 0
+	return n, max
+end
+
+local function StoreVisits( n, max )
+	local ch = C.Char()
+	if not ch then return end
+	local v = ch.visits
+	local same = type( v ) == "table" and v.n == n and v.max == max
+	ch.visits = { n = n, max = max, at = ML.Now() }
+	if not same then Changed() end
+end
+
+function C.ReadVisits()
+	-- Ожидаем: список сражений приходит не сразу после запроса — дождёмся EVENT_MATCH_MAKING_EVENTS_CHANGED
+	if not matchMaking.IsEventListValid() then return end
+	local ids = matchMaking.GetEvents()
+	if type( ids ) ~= "table" then return end
+	for _, id in pairs( ids ) do
+		local n, max = LabyrinthVisits( id )
+		if n then
+			StoreVisits( n, max )
+			return
+		end
+	end
+end
+
+function C.OnVisitsChanged( p )
+	local n, max = LabyrinthVisits( p.eventId )
+	if n then StoreVisits( n, max ) end
+end
+
+-- Просим игру присылать список сражений (сама она делает это только при открытом окне «Сражения»)
+function C.ListenVisits()
+	-- Ожидаем: сражения персонажу могут быть ещё закрыты — тогда посещений не показываем
+	if not matchMaking.CanUseMatchMaking() then return end
+	matchMaking.ListenEvents( true )
+	C.ReadVisits()
+end
+
+-- Игра обнуляет недельный счётчик в ночь со среды на четверг в 03:00 по Москве — это четверг 00:00 UTC.
+-- Unix-время началось в четверг 00:00 UTC, поэтому номер недели — просто целая часть от деления на неделю.
+local WEEK_MS = 7 * ML.DAY_MS
+local function WeekOf( ms )
+	return math.floor( ms / WEEK_MS )
+end
+
+-- Сколько раз персонаж посетил лабиринты за неделю: n, max; nil — данных нет.
+-- Число, записанное до последнего обнуления, уже не действует: в новой неделе посещений ещё не было.
+function C.Visits( ch, now )
+	local v = ch.visits
+	if type( v ) ~= "table" or type( v.n ) ~= "number" or type( v.max ) ~= "number" or type( v.at ) ~= "number" then return nil end
+	if WeekOf( now or ML.Now() ) ~= WeekOf( v.at ) then return 0, v.max end
+	return v.n, v.max
+end
+
 function C.Init()
 	C.Load()
 	EnsureMe()
 	C.OnZoneChanged()
 	C.ReadCurrencies()
+	C.ListenVisits()
 	C.ChestSoon( 5 )
 	C.Save()
 end

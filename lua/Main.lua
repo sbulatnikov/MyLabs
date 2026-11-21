@@ -60,6 +60,64 @@ local function OnSecond()
 	UI.OnSecond()
 end
 
+--@debug
+-- Разведка (только отладочная сборка): что игра отдаёт по сражениям — посещения за день и неделю,
+-- лимиты, тип «грабительский налёт». Нужна, чтобы понять, откуда брать число ограблений.
+local function BattleLine( id )
+	local info = matchMaking.GetEventInfo( id )
+	if type( info ) ~= "table" then return "id=" .. tostring( id ) .. ": описания нет", false end
+	local kinds = {}
+	if type( info.eventType ) == "table" then
+		for k, _ in pairs( info.eventType ) do kinds[ #kinds + 1 ] = tostring( k ) end
+	end
+	local pillage = type( info.eventType ) == "table" and info.eventType.pillage ~= nil
+	return "«" .. ML.Text( info.name ) .. "» тип=" .. table.concat( kinds, "+" )
+		.. " сегодня=" .. tostring( info.todayVisits ) .. "/" .. tostring( info.maxVisitsPerDay )
+		.. " неделя=" .. tostring( info.weeklyVisits ) .. "/" .. tostring( info.maxVisitsPerWeek )
+		.. " сложность=" .. ML.Text( info.difficulty ) .. " (" .. tostring( info.sysDifficultyMode ) .. ")"
+		.. " механика=" .. tostring( info.mechanicsType )
+		.. " доступно=" .. tostring( info.isAvailable ) .. " причина=" .. tostring( info.sysCause )
+		.. " id=" .. tostring( id ), pillage
+end
+
+local function BattlesDump( why, all )
+	local valid = matchMaking.IsEventListValid()
+	ML.Log( "сражения (" .. why .. "): можно пользоваться=" .. tostring( matchMaking.CanUseMatchMaking() ) .. ", список получен=" .. tostring( valid ) )
+	if not valid then return end
+	local ids = matchMaking.GetEvents()
+	if type( ids ) ~= "table" then
+		ML.Log( "сражения: GetEvents вернул " .. tostring( ids ) )
+		return
+	end
+	local total, shown = 0, 0
+	for _, id in pairs( ids ) do
+		total = total + 1
+		local line, pillage = BattleLine( id )
+		if all or pillage then
+			shown = shown + 1
+			ML.Log( ( pillage and "НАЛЁТ " or "сражение " ) .. line )
+		end
+	end
+	ML.Log( "сражения: всего " .. total .. ", выписано " .. shown .. ( all and "" or " (только налёты; все — /mylabs battles)" ) )
+end
+
+local function OnBattlesChanged()
+	BattlesDump( "список изменился", false )
+end
+
+local function OnBattleVisits( p )
+	local line, pillage = BattleLine( p.eventId )
+	ML.Log( "посещения изменились: " .. ( pillage and "НАЛЁТ " or "" ) .. line )
+end
+
+-- /mylabs battles: просим игру присылать список сражений и выписываем его целиком
+local function BattlesCommand()
+	if matchMaking.CanUseMatchMaking() then matchMaking.ListenEvents( true ) end
+	BattlesDump( "команда", true )
+	ML.Chat( "сражения выписаны в Personal\\Logs\\mods.txt" )
+end
+--@end
+
 local function OnSlash( p )
 	local text = ML.Lower( ML.Trim( ML.S( p.text ) ) )
 	if string.sub( text, 1, 7 ) ~= "/mylabs" then return end
@@ -80,6 +138,8 @@ local function OnSlash( p )
 		ML.DEBUG = not ML.DEBUG
 		C.Changed()
 		ML.Chat( "отладка " .. ( ML.DEBUG and "включена: Personal\\Logs\\mods.txt" or "выключена" ) )
+	elseif rest == "battles" then
+		BattlesCommand()
 	--@end
 	else
 		ML.Chat( "версия " .. ML.VERSION .. ". /mylabs — окно; /mylabs auto on|off — автоматика; /mylabs reset — забыть рога персонажа" )
@@ -113,9 +173,16 @@ local function Start()
 	On( "EVENT_CURRENCY_VALUE_CHANGED", C.OnCurrency )
 	On( "EVENT_CONTAINER_ITEM_ADDED", C.OnItemAdded )
 	On( "EVENT_AVATAR_CLIENT_ZONE_CHANGED", C.OnZoneChanged )
+	On( "EVENT_MATCH_MAKING_EVENTS_CHANGED", C.ReadVisits )
+	On( "EVENT_MATCH_MAKING_EVENT_VISITS_CHANGED", C.OnVisitsChanged )
 
 	UI.Render()
 	ML.Log( "MyLabs " .. ML.VERSION .. " загружен" .. ( ML.db.auto and "" or ", автоматика выключена" ) ) --@debug
+	--@debug
+	On( "EVENT_MATCH_MAKING_EVENTS_CHANGED", OnBattlesChanged )
+	On( "EVENT_MATCH_MAKING_EVENT_VISITS_CHANGED", OnBattleVisits )
+	BattlesDump( "запуск", false )
+	--@end
 end
 
 common.RegisterEventHandler( Start, "EVENT_AVATAR_CREATED" )

@@ -5,7 +5,7 @@
 
 ![Окно MyLabs](release/promo/MyLabs-1-cover.png)
 
-Версия 0.9.1 (бета). Автор — NoMercy.
+Версия 0.9.2 (бета). Автор — NoMercy.
 
 ## Что умеет
 
