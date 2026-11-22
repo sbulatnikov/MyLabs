@@ -3,7 +3,7 @@
 --------------------------------------------------------------------------------
 Global( "ML", {} )
 
-ML.VERSION = "0.9.2"
+ML.VERSION = "0.9.3"
 ML.TAG = "[MyLabs] "
 ML.tick = 0                -- секунды с запуска (EVENT_SECOND_TIMER)
 ML.DEBUG = false           -- подробный журнал шагов автоматики (/mylabs debug) --@debug
