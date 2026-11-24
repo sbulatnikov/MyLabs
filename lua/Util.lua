@@ -3,7 +3,7 @@
 --------------------------------------------------------------------------------
 Global( "ML", {} )
 
-ML.VERSION = "0.9.3"
+ML.VERSION = "0.9.4"
 ML.TAG = "[MyLabs] "
 ML.tick = 0                -- секунды с запуска (EVENT_SECOND_TIMER)
 ML.DEBUG = false           -- подробный журнал шагов автоматики (/mylabs debug) --@debug
@@ -240,4 +240,29 @@ function ML.SetTex( w, key )
 		m.tex = key
 		w:SetBackgroundTexture( t )
 	end
+end
+
+-- До версии 0.9.4 форма аддона называлась MainForm. LibDnD хранит места кнопки и окон под ключами
+-- «DnD:<имя формы>.<окно>», поэтому после переименования формы переносим их под новое имя:
+-- иначе после обновления кнопка и окна встали бы на места по умолчанию. Вызывается до DnD.Init.
+function ML.MoveWindowPlaces()
+	local section = common.GetAddonName()
+	local cfg = userMods.GetGlobalConfigSection( section )
+	-- Ожидаем: настроек ещё нет (первый запуск аддона) — переносить нечего
+	if not cfg then return end
+	local oldPrefix = "DnD:MainForm."
+	local newPrefix = "DnD:" .. mainForm:GetName() .. "."
+	local oldKeys = {}
+	for key in pairs( cfg ) do
+		if type( key ) == "string" and string.sub( key, 1, string.len( oldPrefix ) ) == oldPrefix then
+			table.insert( oldKeys, key )
+		end
+	end
+	if #oldKeys == 0 then return end
+	for _, key in ipairs( oldKeys ) do
+		local newKey = newPrefix .. string.sub( key, string.len( oldPrefix ) + 1 )
+		if cfg[ newKey ] == nil then cfg[ newKey ] = cfg[ key ] end
+		cfg[ key ] = nil
+	end
+	userMods.SetGlobalConfigSection( section, cfg )
 end
