@@ -1,4 +1,5 @@
-# Сборка аддона и прогон тестов на заглушках API игры — обычная и отладочная сборка
+# Тесты на заглушках API игры, обычная и отладочная сборка, упаковка в .pak.
+# Шаги общие для всех аддонов: https://github.com/sbulatnikov/allods-addon-ci
 name: CI
 on:
   push:
@@ -8,28 +9,13 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      - name: Инструменты сборки
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y librsvg2-bin luajit
-          pip install numpy pillow
-      - name: Тесты, обычная сборка
-        run: sh test/run.sh out
-      - name: Тесты, отладочная сборка
-        run: ALLODS_DEBUG=1 sh test/run.sh out/debug
-      - name: В обычной сборке нет pcall и отладки
-        run: |
-          ! grep -rnE '(^|[^[:alnum:]_.])pcall\b' out/MyLabs/Scripts --include='*.lua'
-          ! grep -rnwE 'debug|DEBUG|Debug|Probe' out/MyLabs/Scripts --include='*.lua'
-      - name: Упаковка
-        run: python gen/pak.py out/MyLabs out/MyLabs.pak
-      - uses: actions/upload-artifact@v4
-        with:
-          name: MyLabs-pak
-          path: out/MyLabs.pak
+    uses: sbulatnikov/allods-addon-ci/.github/workflows/ci.yml@v1
+    with:
+      apt: librsvg2-bin luajit
+      pip: numpy pillow
+      # Тесты MyLabs сами собирают аддон: генератор кладёт его в <папка>/MyLabs
+      test: |
+        sh test/run.sh out
+        ALLODS_DEBUG=1 sh test/run.sh out/debug
+      build: python gen/assemble.py out
+      build-debug: python gen/assemble.py out/debug
