@@ -393,7 +393,7 @@ X.panel('MLWindow', PL(200, 70, WW, WH), back=WIN_FRAME,
                   'Card.(WidgetPanel).xdb', 'MenuCatcher.(WidgetButton).xdb', 'Menu.(WidgetPanel).xdb'],
         visible=False, priority=900)
 
-X.form('MainForm', ['MLWindow.(WidgetPanel).xdb', 'MLHost.(WidgetPanel).xdb'])
+X.form('MyLabs', ['MLWindow.(WidgetPanel).xdb', 'MLHost.(WidgetPanel).xdb'])
 
 X.text_file('AddonName', 'MyLabs')
 X.text_file('AddonDescription', 'Личный лабиринт: рога изобилия, ресурсы и сундучок хранителя по всем персонажам аккаунта')

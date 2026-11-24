@@ -157,6 +157,7 @@ local function Start()
 	UI.Init()
 	C.OnChanged( UI.Invalidate )
 
+	ML.MoveWindowPlaces()
 	DnD.Init( ML.W( "MLHost" ), ML.W( "MLButton" ), true, true )
 	DnD.Init( ML.W( "MLWindow" ), ML.W( "Header" ), true, true )
 	local stop = DnD.StopDragging

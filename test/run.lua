@@ -148,6 +148,7 @@ userMods = {
 	SetGlobalConfigSection = function( name, t ) stored[ name ] = Clone( t ) world.saves = world.saves + 1 end,
 }
 common = {
+	GetAddonName = function() return "MyLabs" end,
 	LogInfo = function( filter, w ) out[ #out + 1 ] = "LOG " .. w.w all[ #all + 1 ] = w.w end,
 	RegisterEventHandler = function( fn, ev ) handlers[ ev ] = handlers[ ev ] or {} table.insert( handlers[ ev ], fn ) end,
 	RegisterReactionHandler = function( fn, name ) reactions[ name ] = fn end,
@@ -802,5 +803,23 @@ for _, line in ipairs( all ) do
 	end
 end
 check( errors == 0, "ошибок в журнале: " .. errors )
+-- Форма раньше называлась MainForm: места кнопки и окон, сохранённые LibDnD, переезжают на новое имя формы
+stored.MyLabs = stored.MyLabs or {}
+stored.MyLabs.keepMe = 7
+stored.MyLabs[ "DnD:MainForm.MLWindow" ] = { posX = 111, posY = 222 }
+stored.MyLabs[ "DnD:MainForm.Twice" ] = { posX = 1 }
+stored.MyLabs[ "DnD:MyLabs.Twice" ] = { posX = 2 }
+ML.MoveWindowPlaces()
+do
+	local cfg = stored.MyLabs
+	local moved = cfg[ "DnD:MyLabs.MLWindow" ]
+	check( mainForm:GetName() == "MyLabs", "форма называется именем аддона" )
+	check( moved and moved.posX == 111 and moved.posY == 222 and cfg[ "DnD:MainForm.MLWindow" ] == nil, "место окна переехало на новое имя формы, старый ключ убран" )
+	check( cfg[ "DnD:MyLabs.Twice" ].posX == 2 and cfg[ "DnD:MainForm.Twice" ] == nil, "место, уже сохранённое под новым именем, не затирается" )
+	check( cfg.keepMe == 7, "остальные настройки при переносе не тронуты" )
+end
+ML.MoveWindowPlaces()
+check( stored.MyLabs[ "DnD:MyLabs.MLWindow" ].posX == 111, "повторный перенос ничего не меняет" )
+
 print( string.format( "проверок: %d, не прошло: %d", checks, fails ) )
 os.exit( fails == 0 and 0 or 1 )
